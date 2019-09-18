@@ -11,5 +11,6 @@ func debugWriter(data []byte, prefix string, writer io.Writer) {
 	for i, c := 0, len(lines); i < c; i++ {
 		out += prefix + string(lines[i]) + "\n"
 	}
+	out = out[:len(out)-1]
 	writer.Write([]byte(out))
 }
