@@ -12,26 +12,14 @@ if nil != err {
     panic(err)
 }
 
-var queue = make(chan *http.Response, 10)
-var wg sync.WaitGroup
-
-for i := 0; i < 5; i++ {
-    wg.Add(1)
-    go func() {
-        defer wg.Done()
-        for response := range queue {
-            out, _ := httputil.DumpResponse(response, true)
-            fmt.Println(string(out))
-        }
-    }()
+handler := func(resp *http.Response) {
+    out, _ := httputil.DumpResponse(response, true)
+    fmt.Println(string(out))
 }
 
-if err := upnp.Discover(queue, 5*time.Second, ifi, nil, nil); err != nil {
+if err := upnp.Discover(context.Background(), handler, 5*time.Second, ifi, nil, nil); err != nil {
     panic(err)
 }
-
-close(queue)
-wg.Wait()
 
 
 ```
@@ -39,7 +27,7 @@ wg.Wait()
 by default it will search for all UPnP devices and services but can be changed with the headers argument:
 
 ```
-if err := upnp.Discover(queue, 5*time.Second, nil, map[string]string{"ST": "upnp:rootdevice"}, nil); err != nil {
+if err := upnp.Discover(context.Background(), handler, 5*time.Second, nil, map[string]string{"ST": "upnp:rootdevice"}, nil); err != nil {
     panic(err)
 }
 ```

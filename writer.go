@@ -13,7 +13,7 @@ type writer struct {
 
 func (w *writer) Write(p []byte) (n int, err error) {
 	if w.debug != nil {
-		debugWriter(p, "<< ", w.debug)
+		debugWriter(p, ">> ", w.debug)
 	}
 	return w.conn.WriteTo(p, w.addr)
 }

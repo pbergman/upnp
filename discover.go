@@ -1,6 +1,7 @@
 package upnp
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -14,7 +15,7 @@ import (
 // The ifi parameter can be null although this is not recommended because the
 // assignment depends on platforms and sometimes it might require routing
 // configuration (see net.ListenMulticastUDP).
-func Discover(queue chan<- *http.Response, timeout time.Duration, ifi *net.Interface, headers map[string]string, debug io.Writer) error {
+func Discover(ctx context.Context, handler func(resp *http.Response), timeout time.Duration, ifi *net.Interface, headers map[string]string, debug io.Writer) error {
 
 	readers := newReaderPool()
 	addr := &net.UDPAddr{IP: []byte{239, 255, 255, 250}, Port: 1900}
@@ -32,7 +33,7 @@ func Discover(queue chan<- *http.Response, timeout time.Duration, ifi *net.Inter
 	}
 
 	if err := request.Write(&writer{conn: socket, addr: addr, debug: debug}); err != nil {
-		if e, ok := err.(net.Error); !ok || !e.Timeout() {
+		if false == isTimeout(err) {
 			return fmt.Errorf("failed to write request to UPnP conn: %s", err)
 		}
 		return nil
@@ -40,19 +41,30 @@ func Discover(queue chan<- *http.Response, timeout time.Duration, ifi *net.Inter
 
 	var wg sync.WaitGroup
 
+	defer func() {
+		wg.Wait()
+	}()
+
 	for {
-		resp := make([]byte, 4096)
-		n, _, err := socket.ReadFrom(resp)
+
+		resp, err := read(socket)
+
 		if err != nil {
-			if e, ok := err.(net.Error); !ok || !e.Timeout() {
-				return fmt.Errorf("UPnP read error: %s", err)
+			if isTimeout(err) {
+				break
+			} else {
+				return err
 			}
-			break
 		}
-		wg.Add(1)
-		go parseResponse(&wg, resp[:n], readers, queue, debug)
+
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			wg.Add(1)
+			go parse(&wg, resp, readers, handler, debug)
+		}
 	}
 
-	wg.Wait()
 	return nil
 }

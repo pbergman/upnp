@@ -17,7 +17,7 @@ func newRequest(timeout time.Duration, addr net.Addr, headers map[string]string)
 	request.ProtoMajor = 1
 	request.ProtoMinor = 1
 	request.Header = http.Header(map[string][]string{
-		"ST":  {"ssdp:all"},
+		//"ST":  {"ssdp:all"},
 		"MAN": {"ssdp:discover"},
 		"MX":  {strconv.Itoa(int(timeout / time.Second))},
 	})
